@@ -32,6 +32,14 @@ if COMPASS
         help
             Build the IST8310 driver: ist8310_probe() and friends.
 
+    config COMPASS_LIS3MDL
+        bool "ST LIS3MDL (I2C 0x1C/0x1E, or SPI)"
+        default n
+        help
+            Build the LIS3MDL driver: lis3mdl_probe_i2c(),
+            lis3mdl_probe_spi() and friends. On the STM32 HAL it needs
+            both the I2C and the SPI module.
+
     config COMPASS_DEBUG
         bool "compass_dbg() lines"
         default n

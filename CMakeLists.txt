@@ -11,7 +11,7 @@
 set(srcs "src/compass.c" "src/compass_log.c" "src/compass_port_esp.c")
 
 if(CONFIG_COMPASS AND NOT (CONFIG_COMPASS_QMC5883L OR CONFIG_COMPASS_QMC5883P
-                           OR CONFIG_COMPASS_IST8310))
+                           OR CONFIG_COMPASS_IST8310 OR CONFIG_COMPASS_LIS3MDL))
     message(WARNING "compass: CONFIG_COMPASS is on but no chip driver is "
                     "selected; set CONFIG_COMPASS_<CHIP>=y "
                     "(esp-forge: COMPASS_<CHIP> = y)")
@@ -25,6 +25,9 @@ if(CONFIG_COMPASS_QMC5883P)
 endif()
 if(CONFIG_COMPASS_IST8310)
     list(APPEND srcs "src/ist8310.c")
+endif()
+if(CONFIG_COMPASS_LIS3MDL)
+    list(APPEND srcs "src/lis3mdl.c")
 endif()
 
 idf_component_register(SRCS ${srcs}

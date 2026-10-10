@@ -12,5 +12,7 @@ test/test_qmc5883p_math
 test/test_qmc5883p
 test/test_ist8310_math
 test/test_ist8310
+test/test_lis3mdl_math
+test/test_lis3mdl
 test/test_port_stm
 test/test_port_esp

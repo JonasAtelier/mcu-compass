@@ -25,6 +25,8 @@
 
 #include "compass.h"
 #include "compass_priv.h"
+#include "lis3mdl.h"
+#include "lis3mdl_regs.h"
 #include "qmc5883l.h"
 #include "qmc5883l_regs.h"
 
@@ -403,6 +405,39 @@ static void test_spi(void)
 	assert(spi_devices == 0);
 }
 
+/* The LIS3MDL's ESP-only SPI choices: mode 3, 5 MHz unless asked, <= 10. */
+static void test_lis3mdl_spi(void)
+{
+	struct lis3mdl_spi_config spi = { .host = SPI2_HOST, .cs_pin = 7 };
+	struct compass_dev compass = { 0 };
+
+	next_err = ESP_OK;
+	memset(spi_reply, 0, sizeof(spi_reply));
+	spi_reply[1] = LIS3MDL_WHO_AM_I_VALUE;	/* after the address byte */
+	assert(lis3mdl_probe_spi(&compass, &spi, NULL) == 0);
+	assert(spi_devices == 1 && spi_cfg.mode == 3 &&
+	       spi_cfg.clock_speed_hz == 5000000 && spi_cfg.spics_io_num == 7);
+	lis3mdl_remove(&compass);
+	assert(spi_devices == 0);
+	/* Removing powers it down: CTRL_REG3 = 11b, a plain write. */
+	assert(spi_bits == 16 && spi_out[0] == LIS3MDL_CTRL_REG3 &&
+	       spi_out[1] == LIS3MDL_MD_POWER_DOWN);
+
+	spi.clock_hz = 10000000;
+	assert(lis3mdl_probe_spi(&compass, &spi, NULL) == 0);
+	assert(spi_cfg.clock_speed_hz == 10000000);
+	lis3mdl_remove(&compass);
+	spi.clock_hz = 10000001;
+	assert(lis3mdl_probe_spi(&compass, &spi, NULL) == -EINVAL);
+	assert(spi_devices == 0);
+
+	/* A wrong WHO_AM_I takes the device off the bus again. */
+	spi.clock_hz = 0;
+	spi_reply[1] = 0xFF;
+	assert(lis3mdl_probe_spi(&compass, &spi, NULL) == -ENODEV);
+	assert(spi_devices == 0 && !compass.ops);
+}
+
 static void test_uart(void)
 {
 	static const uint8_t args[2] = { 0x11, 0x22 };
@@ -488,6 +523,7 @@ int main(void)
 	test_scl_hz();
 	test_device_released();
 	test_spi();
+	test_lis3mdl_spi();
 	test_uart();
 	test_clock_and_sleep();
 	printf("test_port_esp: all passed\n");
