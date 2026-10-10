@@ -14,9 +14,11 @@
 
 A small Linux-IIO-style magnetometer subsystem for ESP-IDF and the STM32 HAL
 (F4 and F7),
-plus three chip drivers, all over I2C: the QST **QMC5883L** and the QST
-**QMC5883P** — the two parts a "GY-271" compass board actually carries — and
-the iSentek **IST8310**, the compass on many drone GPS masts. Every
+plus five chip drivers: the QST **QMC5883L** and the QST **QMC5883P** — the
+two parts a "GY-271" compass board actually carries — and the iSentek
+**IST8310**, the compass on many drone GPS masts, all over I2C; the ST
+**LIS3MDL**, over I2C or SPI; and the Robot Electronics **CMPS14** module,
+over its serial link. Every
 chip's probe fills one `struct compass_dev`, and from then on
 `compass_read()` gives you the same `struct compass_sample` whatever the chip
 is: the field in **microtesla**, rotated into your board's frame, with a
@@ -33,6 +35,17 @@ defines for every component. Probes take the platform's own bus handle:
 `i2c_master_bus_handle_t` on ESP-IDF, `I2C_HandleTypeDef *` on the HAL. Only
 the ESP-IDF configs have `scl_hz`, because only there does the driver add its
 own device to the bus; on the HAL the bus speed is the handle's.
+
+**One bus layer, three bus kinds.** Under the chips sits a regmap-style ops
+table, `struct compass_bus_ops` in `src/compass_priv.h`: each chip holds one
+`struct compass_bus` and talks to it only through `transfer(cmd, tx, rx)`.
+The kind — I2C, SPI or UART — is picked at run time by which attach the
+probe calls; the platform stays a link-time choice. `transfer` is a command
+with a reply, not a register read/write, because a serial-command module
+(command byte, optional arguments, a fixed-length answer) does not fit
+register access; on I2C and SPI the command is the register address, and
+`compass_reg_read()`/`compass_reg_write()` are the usual shape on top. The
+CMPS14 is the UART user: each of its serial commands is one `transfer`.
 
 > **Hardware unverified.** The host tests in `test/` pass. Nothing here has
 > run on a physical chip.
@@ -54,6 +67,8 @@ PKG_compass         = y
 COMPASS_QMC5883L    = y
 COMPASS_QMC5883P    = y
 COMPASS_IST8310     = y
+COMPASS_LIS3MDL     = y
+COMPASS_CMPS14      = y
 # COMPASS_DEBUG is not set
 ```
 
@@ -91,13 +106,16 @@ CMakeLists warns and `src/compass_port_stm.c` emits a `#warning`.
 
 The rest of this section is the STM32 HAL's.
 
-**The HAL module is yours to enable.** All three drivers call the HAL's I2C, so
-your app's `stm32f4xx_hal_conf.h` (or `stm32f7xx_hal_conf.h`) must define it,
-and its `.c` must be in the build:
+**The HAL modules are yours to enable.** The I2C drivers call the HAL's I2C,
+the LIS3MDL also its SPI, and the CMPS14 its UART, so your app's `stm32f4xx_hal_conf.h` (or
+`stm32f7xx_hal_conf.h`) must define them, and their `.c` must be in the
+build:
 
 | Option | Needs in hal_conf | HAL source |
 |---|---|---|
 | `COMPASS_QMC5883L`, `COMPASS_QMC5883P`, `COMPASS_IST8310` | `HAL_I2C_MODULE_ENABLED` | `stm32f{4,7}xx_hal_i2c.c` |
+| `COMPASS_LIS3MDL` | `HAL_I2C_MODULE_ENABLED` and `HAL_SPI_MODULE_ENABLED` (plus GPIO, for chip select) | `stm32f{4,7}xx_hal_i2c.c`, `_hal_spi.c` |
+| `COMPASS_CMPS14` | `HAL_UART_MODULE_ENABLED` | `stm32f{4,7}xx_hal_uart.c` |
 
 stm-forge's `mcu/stm32f4.cmake` and `mcu/stm32f7.cmake` already list it,
 plus `_hal_i2c_ex.c` (for the `HAL_I2CEx_ConfigAnalogFilter()` that
@@ -319,10 +337,10 @@ decide for you.
 |---|---|---|
 | `-EINVAL` | any | NULL argument; an enum out of range; on the HAL, a `reg_read` longer than 65535 bytes; a `compass_dev` another driver probed; on ESP-IDF, `ESP_ERR_INVALID_ARG` |
 | `-EBUSY` | probe | that `compass_dev` is already bound. Nothing was touched |
-| `-ENXIO` | probe | nothing ACKed at the chip's address, checked with `i2c_master_probe()` or `HAL_I2C_IsDeviceReady()` before anything is allocated or written. On a GY-271, try the other chip |
-| `-ENODEV` | probe | something answered but it is not the chip: QMC5883P `CHIPID` not 0x80; QMC5883L identity not 0xFF, or a write that did not read back (a floating bus); IST8310 `WAI` not 0x10 |
+| `-ENXIO` | probe | nothing ACKed at the chip's address — or, for the CMPS14, nothing answered on the UART within 100 ms — checked with `i2c_master_probe()` or `HAL_I2C_IsDeviceReady()` before anything is allocated or written. On a GY-271, try the other chip |
+| `-ENODEV` | probe | something answered but it is not the chip: QMC5883P `CHIPID` not 0x80; QMC5883L identity not 0xFF, or a write that did not read back (a floating bus); IST8310 `WAI` not 0x10; LIS3MDL `WHO_AM_I` not 0x3D — on SPI, which has no acknowledge, also an empty bus |
 | `-EAGAIN` | any | HAL only: the HAL answered `HAL_BUSY`: the bus or the handle is in use, or the handle was never `HAL_I2C_Init()`ed. On the F4, also a bus with no pull-ups or SDA stuck low during the probe's presence check — see below |
-| `-ERANGE` | read | the chip flagged overflow: the reading is clipped. On the IST8310, which has no flag, an axis past its §4.4 range |
+| `-ERANGE` | read | the chip flagged overflow: the reading is clipped. On the IST8310 and the LIS3MDL, an axis past the datasheet's measurement range |
 | `-ENODATA` | read | IST8310 only: the measurement the last read started has not landed yet. Read again later; nothing is wrong |
 | `-ETIMEDOUT` | any | a bus transfer timed out (`ESP_ERR_TIMEOUT`, `HAL_TIMEOUT`), or the QMC5883P self-test saw no data ready within 100 ms |
 | `-EIO` | any | any other bus failure (`HAL_ERROR`; on ESP-IDF `ESP_ERR_INVALID_STATE` and the rest), including a NACK in the middle of a transfer |
@@ -477,21 +495,124 @@ The axes are drawn in §2.2's 3D top view: X+ and Y+ in the board plane, Z+ up
 out of it. Set `mount` from that figure, and check it against a known
 heading — nothing here has run on a chip.
 
+### LIS3MDL
+
+ST datasheet DocID024204 Rev 4, in `docs/` (PDFs are not committed). Every
+register value in `src/lis3mdl_regs.h` and `src/lis3mdl.c` cites its section
+or table.
+
+**Two probes, one driver.** `lis3mdl_probe_i2c()` takes the same bus handle
+as the other chips, at 0x1E (SA1 high) or 0x1C (SA1 low, §5.1.1);
+`lis3mdl_probe_spi()` takes a `struct lis3mdl_spi_config`. On ESP-IDF that is
+a host the app has `spi_bus_initialize()`d plus a CS pin, and the driver adds
+the device in mode 3 at 5 MHz unless asked (at most 10 MHz, Table 6). On the
+HAL it is an `SPI_HandleTypeDef *` the app has set up in mode 3 (§5.2: SPC
+idles high, data captured on the rising edge), plus a GPIO port and pin for
+chip select, an output idling high; the driver drives it around each
+transfer. CS high selects I2C (§5), so on I2C tie it to Vdd_IO. On SPI there
+is no acknowledge: an empty bus reads `WHO_AM_I` as 0x00 or 0xFF and the
+probe says `-ENODEV`, not `-ENXIO`.
+
+**The address byte is the only difference.** On I2C, `SUB(7)` set
+auto-increments (§5.1.1); on SPI the byte is RW, MS, AD(5:0) (§5.2), so a
+burst read of the six data bytes is `0xA8` on I2C and `0xE8` on SPI.
+
+**What probe writes**, after `WHO_AM_I` reads 0x3D (Table 17), every control
+register from scratch, conversion last: `CTRL_REG1` with `TEMP_EN`, the X/Y
+mode (Table 21) and the rate (Table 22); `CTRL_REG2` the full scale
+(Table 25); `CTRL_REG4` the Z mode (Table 31); `CTRL_REG5 = 0x40`, `BDU`, so a
+burst never mixes two samples; `CTRL_REG3 = 0x00`, continuous conversion and
+4-wire SPI. All zero is the chip's own defaults: ±4 gauss, 10 Hz, low-power.
+`enum lis3mdl_odr` puts 10 Hz first for that reason, so its values are not
+the register codes. Remove writes `CTRL_REG3 = 0x03`, power-down (Table 28).
+
+**Clipping.** Table 3's measurement range times its sensitivity is about
+27370 counts on every range; past it, `compass_read()` is `-ERANGE`. The
+part's own flag, `MROI` in `INT_SRC` (Table 38), sits in the interrupt block
+the driver leaves off.
+
+**Gaps in the datasheet**, filled with a stated assumption:
+
+- No time for `SOFT_RST` or `REBOOT` to finish. The driver uses neither:
+  writing every control register gives a known state without a wait.
+- The temperature has a slope, 8 LSB/°C (Table 4), but no zero point, so
+  `lis3mdl_temperature()` is relative, like the QMC5883L's.
+- `FAST_ODR` rates (Table 20) and the self-test (`ST`) are not modelled;
+  `lis3mdl_reg_write()` reaches them.
+
+The axes are drawn in Figure 5's top view. Set `mount` from it, and check
+against a known heading — nothing here has run on a chip.
+
+### CMPS14
+
+Robot Electronics' "CMPS14 – documentation", in `docs/cmps14.pdf` (not
+committed). Every command byte in `src/cmps14_cmds.h` and `src/cmps14.c`
+cites its page.
+
+**Serial only.** The module has an I2C mode too, chosen by its mode pin at
+power-up (p.1); this driver does not support it. Tie the mode pin to 0 V
+before power-up, and set the UART up as p.5 says: **9600 bps, 8 data bits,
+no parity, 1 stop bit**, at 3.3–5 V logic. Never RS232 levels. On ESP-IDF
+`cmps14_probe()` takes a `uart_port_t` whose driver the app has installed;
+on the HAL a `UART_HandleTypeDef *` it has initialised. The line is the
+app's; the driver never configures it.
+
+**Command and answer.** Every exchange is one command byte and a fixed
+number of answer bytes (p.6), which is exactly one bus `transfer`. Before
+each one the port drops whatever is waiting on the line, so a late byte from
+an earlier exchange is never read as this one's answer. Probe sends
+`GET VERSION` (0x11): silence within 100 ms is `-ENXIO`, decided before
+anything is allocated. The module has no identity register, so any
+one-byte answer counts as a CMPS14.
+
+**The field is already calibrated.** `GET MAGNETOMETER` (0x19) answers six
+bytes, high byte first, in **µT with Q point 4** — 16 counts per µT (p.3,
+p.6) — corrected for hard and soft iron by the module itself (p.3), so skip
+your own hard-iron offset unless you have turned its calibration off. The
+module reports no overflow and the document gives no range, so a CMPS14
+read is never `-ERANGE`.
+
+**Extras.** `cmps14_bearing_deg()` is the module's own tilt-compensated
+bearing (0x13, 0–3599 tenths, p.2). `cmps14_calibration_state()` (0x24)
+gives two bits each for magnetometer, accelerometer, gyro and system (p.7;
+the gyro field is a known sensor bug there). `cmps14_set_calibration()`
+sends 0x98, 0x95, 0x99, each answered 0x55, then the setup byte with bit 7
+set and your `CMPS14_CAL_*` bits (p.7). `cmps14_store_calibration()` sends
+0xF0, 0xF5, 0xF6 and `cmps14_erase_calibration()` 0xE0, 0xE5, 0xE2, then
+waits the 300 ms p.7 recommends for the BNO080's reset. `cmps14_command()`
+reaches the rest of p.6: pitch, roll, acceleration, gyro.
+
+**Gaps in the document**, filled with a stated assumption:
+
+- No answer time. The driver allows 100 ms per exchange; six bytes take
+  about 6 ms at 9600 bps.
+- p.7 gives the calibration setup byte no answer. The driver waits for one
+  byte anyway: 0x55 or silence is success, anything else `-EIO`. A late
+  0x55 left unread would land in the next command's answer.
+- The protocol has no checksum. Stale input is dropped before each command,
+  best effort: an answer that comes after its own timeout can still shift
+  the next one.
+- Changing the baud rate (0xA0, 0xA1) is not modelled: the answer comes
+  back at the new rate (p.7), so the app must follow with its own UART.
+  `cmps14_command()` sends it.
+
 ## Adding a chip
 
 A driver is a probe, a remove and one read function:
 
 1. `include/foo.h`: `foo_probe(struct compass_dev *compass, <bus>, const struct foo_config *cfg)`
    with `<bus>` `i2c_master_bus_handle_t` under `#ifdef ESP_PLATFORM` and
-   `I2C_HandleTypeDef *` otherwise, as `qmc5883p.h` does, plus
+   `I2C_HandleTypeDef *` otherwise, as `qmc5883p.h` does (an SPI chip takes a
+   per-platform `struct foo_spi_config`, as `lis3mdl.h` does), plus
    `void foo_remove(struct compass_dev *compass);`. Give the config a
    `uint32_t scl_hz` under `#ifdef ESP_PLATFORM`.
 2. `src/foo.c`, flat in `src/` — stm-forge does not glob subdirectories —
    with private headers beside it. Wrap the whole driver in
-   `#if CONFIG_COMPASS_FOO` (never `#ifdef`). It never names a platform:
-   define probe with `compass_i2c_bus bus`, keep a `struct compass_i2c` in
-   your state, and talk to the chip through the `compass_i2c_*()` functions
-   in `src/compass_priv.h`. Give it a
+   `#if CONFIG_COMPASS_FOO` (never `#ifdef`). It names a platform only to
+   unpack an SPI config: define an I2C probe with `compass_i2c_bus bus`, keep
+   a `struct compass_bus` in your state, and talk to the chip only through
+   `bus.ops->transfer()` or `compass_reg_read()`/`compass_reg_write()` from
+   `src/compass_priv.h`. Give it a
    `static const struct compass_ops foo_ops = { .read = foo_read };`, where
    `foo_read()` fills `field[]` in µT, chip frame, and returns `-ERANGE` for a
    clipped reading. It must not touch `t_us` or apply `mount`;
@@ -500,9 +621,9 @@ A driver is a probe, a remove and one read function:
    set, before touching anything. Then set `compass->name` so failures log
    with it, refuse a bad config, check presence with `compass_i2c_probe()`
    before allocating (→ `-ENXIO`, logged with `compass_dbg()` only), allocate
-   your state, `compass_i2c_attach()` it with
-   `compass_config_scl_hz(cfg)`, put it into `compass->priv`, set
-   `compass->ops = &foo_ops`, and on failure `compass_i2c_detach()` and put
+   your state, `compass_i2c_attach()` (or `_spi_`, `_uart_`) it, with
+   `compass_config_scl_hz(cfg)` on I2C, put it into `compass->priv`, set
+   `compass->ops = &foo_ops`, and on failure `compass_bus_detach()` and put
    both back to NULL; remove detaches too. Use `compass_sleep_ms()` for
    every wait, `compass_expired()` for every poll limit, and `compass_err()`
    for anything the user needs to see.
@@ -517,7 +638,7 @@ A driver is a probe, a remove and one read function:
 
 - **No calibration.** Hard- and soft-iron offsets are yours; see above.
 - **No tilt compensation.** That needs an accelerometer; see the imu library.
-- **No interrupts, FIFO or DMA.** Data ready is polled over I2C, and every
+- **No interrupts, FIFO or DMA.** Data ready is polled over the bus, and every
   transfer is a blocking bus call.
 - **No HMC5883L.** The gy271 example will tell you if you have one.
 - **No locking.** One thread per `compass_dev` and per bus handle, or bring
@@ -533,8 +654,9 @@ make -C test test
 
 Host-only; no toolchain, HAL or ESP-IDF needed. The chip drivers are tested
 once, through `src/compass_port_stm.c` against the slice of the HAL stubbed
-in `test/hal_stubs/`; `test_port_esp` checks what `src/compass_port_esp.c`
-does differently, against `test/idf_stubs/`. Nothing is checked against real
+in `test/hal_stubs/`; `test_port_stm` drives all three bus kinds of that
+port directly, and `test_port_esp` checks what `src/compass_port_esp.c` does
+differently, against `test/idf_stubs/`. Nothing is checked against real
 silicon. The `compass: <chip>:` lines in the output are the drivers logging
 the failures the tests provoke.
 
@@ -546,7 +668,12 @@ the failures the tests provoke.
 | `test_qmc5883p_math` | Table 2 sensitivities, 30000-count full scale on every range equal to the OVFL threshold, §7.1/§7.2/§7.3/§7.4 register bytes from the field builders, §7.3's self-test signs, register constants typed from the datasheet |
 | `test_ist8310_math` | §4.4's 0.3 µT per count against the 3.3 LSB/µT it rounds to, the ±1600 µT and 14-bit limits on every axis and both signs, little-endian samples, §6.4.10 averaging codes and §3.1.1's 24h, register constants typed from the datasheet |
 | `test_ist8310` | a fake IST8310 that measures only when triggered and lands the result 6 ms later: probe's reset, wait and §3.1.1 settings, `-ENXIO`/`-ENODEV`/errno mapping, a read before the result is `-ENODATA` and never re-triggers a running measurement, each read starts the next, clipped axes are `-ERANGE`, a lost trigger is recovered after more than 100 ms and a refused one on the next read, `-EBUSY`, foreign devices refused, a refused config allocates nothing and a failed probe leaks nothing |
-| `test_port_esp` | the ESP-IDF port: every `esp_err_t` to its errno through probe, read and write; the device added at 400 kHz for `scl_hz` 0 and at the given speed otherwise, from the port and through a probe; the device removed by `*_remove()`, by a probe that fails after adding it, and never left behind by a refused add; `compass_time_us()`/`compass_tick_ms()` from `esp_timer`; the tick-rounded sleep at 100 Hz and 1 kHz; the `compass` log tag |
+| `test_port_esp` | the ESP-IDF port: every `esp_err_t` to its errno through probe, read and write; the device added at 400 kHz for `scl_hz` 0 and at the given speed otherwise, from the port and through a probe; the device removed by `*_remove()`, by a probe that fails after adding it, and never left behind by a refused add; `compass_time_us()`/`compass_tick_ms()` from `esp_timer`; the tick-rounded sleep at 100 Hz and 1 kHz; the `compass` log tag; I2C, SPI and UART framing — a bare command, write-then-read refused on I2C, SPI as one full-duplex transaction with rx after cmd and tx, UART input flushed before the send, a short reply as `-ETIMEDOUT`, driver failures as `-EIO`, an uninstalled UART driver refused; the LIS3MDL's SPI device in mode 3 at 5 MHz by default, 10 MHz allowed and 10 MHz + 1 refused, removed on remove and on a wrong `WHO_AM_I`; the CMPS14 refusing a port with no driver installed, probing by `GET VERSION`, and silence as `-ENXIO` |
+| `test_cmps14_math` | p.6's high-byte-first samples, Q point 4 (16 counts per µT), 0–3599 tenths of a degree, every command byte and p.7's setup-byte bits typed from the document |
+| `test_cmps14` | a fake module on the HAL UART that answers the p.6 table and the p.7 sequences only in order: probe by `GET VERSION`, silence as `-ENXIO` with nothing allocated, a stale byte on the line dropped before the version is read, the field in µT, a module gone quiet as `-ETIMEDOUT` with the sample untouched, bearing and calibration state, the calibration setup byte with bit 7 set and undefined bits refused, its answer read whether it comes at once, late (during the wait, where unread it would shift the next read) or not at all, any other answer as `-EIO`, store, erase with its 300 ms, an answer other than 0x55 as `-EIO`, the escape hatch, `-EBUSY`, foreign devices refused |
+| `test_port_stm` | the HAL port's three ops: HAL status to errno on each; I2C reads as `Mem_Read`, writes as `Mem_Write`, a bare command as a plain transmit, and the transfers I2C cannot do refused before the bus; SPI chip select low around cmd, tx and rx and high again after a failure; UART overrun cleared and stale bytes read out before the send, no receive after a failed send or for a command without a reply, a short reply as `-ETIMEDOUT` |
+| `test_lis3mdl_math` | Table 3 ranges and sensitivities, 100 µT per gauss of counts on every range, Table 22 rates and the enum's mapping onto them with 10 Hz first, the clip limit on every axis and sign, little-endian samples, Table 4's 8 LSB/°C, register addresses and bit positions typed from the datasheet |
+| `test_lis3mdl` | a fake LIS3MDL on I2C and on SPI that decodes the address byte as §5.1.1 and §5.2 say, so a missing auto-increment or read bit gives wrong data, and counts writes to reserved registers or must-be-0 bits: probe's register state for the defaults and a full config, the same field read through either bus, `-ERANGE` past full scale with the sample untouched, absent on I2C (`-ENXIO`, nothing allocated), wrong `WHO_AM_I` and an empty SPI bus (`-ENODEV`, nothing leaked), chip select released after every transfer and every failure, extras, the escape hatch's limits, `-EBUSY`, foreign devices refused |
 | `test_qmc5883p` | a fake QMC5883P behind a stubbed HAL that counts every datasheet rule broken: probe's exact write sequence against §7.1 and §7.2, suspend between modes, 29H before measuring, STATUS clears on read and the latched overflow survives a `data_ready()` poll, self-test only in continuous mode with the 5 ms wait honoured, range and mode restored, stale DRDY/OVFL cleared, a self-test that never sees data times out after more than 100 ms by the tick — across the tick counter's wrap — and still restores, errno mapping, `-EBUSY`, foreign devices refused, a refused config allocates nothing and a failed probe leaks nothing |
 
 All build under `-std=gnu11 -Wall -Wextra -Werror -pedantic`, with
