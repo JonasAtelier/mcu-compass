@@ -1,0 +1,42 @@
+# Read by ESP-IDF as a component Kconfig, and by both forges' `make menu`
+# (scripts/menu.py) for the COMPASS_<CHIP> prompts. stm-forge has no Kconfig
+# build step: its build only sees the defconfig lines, as
+# -DCONFIG_COMPASS_<CHIP>=1 or 0. Every chip is off unless set.
+menuconfig COMPASS
+    bool "Compass (magnetometer) subsystem"
+    default y
+    help
+        The compass core: struct compass_dev, compass_read(),
+        compass_heading_deg() and the compass_* log helpers. Pick the chip
+        drivers you need below; none is built by default, so a chip missing
+        from sdkconfig is off.
+
+if COMPASS
+
+    config COMPASS_QMC5883L
+        bool "QST QMC5883L (I2C, 0x0D)"
+        default n
+        help
+            Build the QMC5883L driver: qmc5883l_probe() and friends.
+
+    config COMPASS_QMC5883P
+        bool "QST QMC5883P (I2C, 0x2C)"
+        default n
+        help
+            Build the QMC5883P driver: qmc5883p_probe() and friends. Most
+            GY-271 boards sold today carry this part, not the QMC5883L.
+
+    config COMPASS_IST8310
+        bool "iSentek IST8310 (I2C, 0x0C-0x0F)"
+        default n
+        help
+            Build the IST8310 driver: ist8310_probe() and friends.
+
+    config COMPASS_DEBUG
+        bool "compass_dbg() lines"
+        default n
+        help
+            STM32 HAL only: compile compass_dbg() lines in. On ESP-IDF
+            compass_dbg() is ESP_LOGD and the log level decides.
+
+endif # COMPASS
