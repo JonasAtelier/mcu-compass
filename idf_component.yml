@@ -1,5 +1,5 @@
 version: "0.2.0"
-description: Small Linux-IIO-style magnetometer subsystem for ESP-IDF and the STM32 HAL, with QMC5883L, QMC5883P and IST8310 drivers.
+description: mcu-compass magnetometer subsystem for ESP-IDF and STM32 HAL, with QMC5883L, QMC5883P, IST8310, LIS3MDL and CMPS14 drivers.
 license: MIT
 dependencies:
   idf:
