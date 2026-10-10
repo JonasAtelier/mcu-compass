@@ -40,6 +40,14 @@ if COMPASS
             lis3mdl_probe_spi() and friends. On the STM32 HAL it needs
             both the I2C and the SPI module.
 
+    config COMPASS_CMPS14
+        bool "Robot Electronics CMPS14 (serial)"
+        default n
+        help
+            Build the CMPS14 driver, serial mode only: cmps14_probe() and
+            friends. The app sets the UART up at 9600 8N1. On the STM32 HAL
+            it needs the UART module.
+
     config COMPASS_DEBUG
         bool "compass_dbg() lines"
         default n

@@ -24,6 +24,7 @@
 #include "freertos/task.h"
 
 #include "compass.h"
+#include "cmps14.h"
 #include "compass_priv.h"
 #include "lis3mdl.h"
 #include "lis3mdl_regs.h"
@@ -498,6 +499,30 @@ static void test_uart(void)
 	compass_bus_detach(&bus);
 }
 
+/* The CMPS14 on an ESP-IDF port: the app's driver, or nothing. */
+static void test_cmps14(void)
+{
+	struct compass_dev compass = { 0 };
+	uint8_t v = 0;
+
+	uart_reset();
+	uart_installed = false;
+	assert(cmps14_probe(&compass, UART_PORT) == -EINVAL);
+
+	uart_reset();
+	uart_reply[0] = 9;	/* p.6: GET VERSION answers one byte */
+	uart_reply_len = 1;
+	assert(cmps14_probe(&compass, UART_PORT) == 0);
+	assert(uart_out_len == 1 && uart_out[0] == 0x11);
+	assert(cmps14_version(&compass, &v) == 0 && v == 9);
+	cmps14_remove(&compass);
+
+	/* Silence is -ENXIO. */
+	uart_reset();
+	assert(cmps14_probe(&compass, UART_PORT) == -ENXIO);
+	assert(!compass.ops && !compass.priv);
+}
+
 static void test_clock_and_sleep(void)
 {
 	stub_time_us = 123456789;
@@ -525,6 +550,7 @@ int main(void)
 	test_spi();
 	test_lis3mdl_spi();
 	test_uart();
+	test_cmps14();
 	test_clock_and_sleep();
 	printf("test_port_esp: all passed\n");
 	return 0;
