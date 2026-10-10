@@ -6,7 +6,7 @@
 #if CONFIG_COMPASS_CMPS14
 
 #include "cmps14.h"
-#include "cmps14_cmds.h"
+#include "cmps14_proto.h"
 #include "cmps14_math.h"
 #include "compass_log.h"
 

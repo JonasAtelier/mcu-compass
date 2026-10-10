@@ -7,7 +7,7 @@
 #include <stdio.h>
 
 #include "cmps14.h"
-#include "cmps14_cmds.h"
+#include "cmps14_proto.h"
 #include "cmps14_math.h"
 
 static int near(float a, float b)

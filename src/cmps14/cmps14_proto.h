@@ -6,8 +6,8 @@
  * Serial is command and answer: one command byte out, a fixed number of
  * bytes back (p.6, "Bytes returned"). There are no registers.
  */
-#ifndef CMPS14_CMDS_H
-#define CMPS14_CMDS_H
+#ifndef CMPS14_PROTO_H
+#define CMPS14_PROTO_H
 
 /* p.6: GET VERSION, 1 byte. */
 #define CMPS14_GET_VERSION		0x11
@@ -55,4 +55,4 @@
 #define CMPS14_ERASE_3			0xE2
 #define CMPS14_ERASE_WAIT_MS		300
 
-#endif /* CMPS14_CMDS_H */
+#endif /* CMPS14_PROTO_H */

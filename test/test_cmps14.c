@@ -18,7 +18,7 @@
 #include "stm32_hal_stub.h"
 
 #include "cmps14.h"
-#include "cmps14_cmds.h"
+#include "cmps14_proto.h"
 #include "cmps14_math.h"
 #include "compass.h"
 

@@ -190,7 +190,7 @@ against a known heading — nothing here has run on a chip.
 ## CMPS14
 
 Robot Electronics' "CMPS14 – documentation", in `docs/cmps14.pdf` (not
-committed). Every command byte in `src/cmps14/cmps14_cmds.h` and `src/cmps14/cmps14.c`
+committed). Every command byte in `src/cmps14/cmps14_proto.h` and `src/cmps14/cmps14.c`
 cites its page.
 
 **Serial only.** The module has an I2C mode too, chosen by its mode pin at
