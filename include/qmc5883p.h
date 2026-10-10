@@ -11,8 +11,8 @@
  * returns -EINVAL if handed a device some other driver probed.
  *
  * Datasheet QST-PD-B002-22 Rev E is in docs/; every register value in
- * src/qmc5883p_regs.h and qmc5883p.c cites its section or table. Nothing here
- * has been run against a physical chip.
+ * src/qmc5883p/qmc5883p_regs.h and qmc5883p.c cites its section or table.
+ * Nothing here has been run against a physical chip.
  */
 #ifndef QMC5883P_H
 #define QMC5883P_H

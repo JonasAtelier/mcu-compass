@@ -1,6 +1,8 @@
-# ESP-IDF only. stm-forge never reads this file: it compiles every src/*.c of
-# the library and adds include/, which is why the sources sit flat in src/ and
-# each port file is empty on the other platform.
+# ESP-IDF only. stm-forge never reads this file: it compiles every .c under
+# src/, chip folders included, puts src/ on the include path of this library's
+# sources and adds include/ -- which is why each port file is empty on the
+# other platform. Here the chip files are listed one by one, and
+# PRIV_INCLUDE_DIRS "src" lets a chip folder reach compass_priv.h by plain name.
 #
 # The core is always built, even with CONFIG_COMPASS off; each chip driver
 # only when its Kconfig option is on. Kconfig values are available here during
@@ -19,19 +21,19 @@ if(CONFIG_COMPASS AND NOT (CONFIG_COMPASS_QMC5883L OR CONFIG_COMPASS_QMC5883P
 endif()
 
 if(CONFIG_COMPASS_QMC5883L)
-    list(APPEND srcs "src/qmc5883l.c")
+    list(APPEND srcs "src/qmc5883l/qmc5883l.c")
 endif()
 if(CONFIG_COMPASS_QMC5883P)
-    list(APPEND srcs "src/qmc5883p.c")
+    list(APPEND srcs "src/qmc5883p/qmc5883p.c")
 endif()
 if(CONFIG_COMPASS_IST8310)
-    list(APPEND srcs "src/ist8310.c")
+    list(APPEND srcs "src/ist8310/ist8310.c")
 endif()
 if(CONFIG_COMPASS_LIS3MDL)
-    list(APPEND srcs "src/lis3mdl.c")
+    list(APPEND srcs "src/lis3mdl/lis3mdl.c")
 endif()
 if(CONFIG_COMPASS_CMPS14)
-    list(APPEND srcs "src/cmps14.c")
+    list(APPEND srcs "src/cmps14/cmps14.c")
 endif()
 
 idf_component_register(SRCS ${srcs}

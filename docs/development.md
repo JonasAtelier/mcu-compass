@@ -39,8 +39,14 @@ A driver is a probe, a remove and one read function:
    per-platform `struct foo_spi_config`, as `lis3mdl.h` does), plus
    `void foo_remove(struct compass_dev *compass);`. Give the config a
    `uint32_t scl_hz` under `#ifdef ESP_PLATFORM`.
-2. `src/foo.c`, flat in `src/` — stm-forge does not glob subdirectories —
-   with private headers beside it. Wrap the whole driver in
+2. `src/foo/foo.c`, in a folder of its own with its private headers
+   (`foo_regs.h`, `foo_math.h`); common files and the platform ports stay at
+   the top of `src/`. Include siblings and `compass_priv.h` by plain name,
+   never with `../`: siblings resolve from the chip's own folder, and
+   `compass_priv.h` through `src/`, which the ESP-IDF CMakeLists has as
+   `PRIV_INCLUDE_DIRS` and stm-forge's `libs.cmake` puts on this library's
+   include path while it compiles every `.c` under `src/`. Wrap the whole
+   driver in
    `#if CONFIG_COMPASS_FOO` (never `#ifdef`). It names a platform only to
    unpack an SPI config: define an I2C probe with `compass_i2c_bus bus`, keep
    a `struct compass_bus` in your state, and talk to the chip only through
@@ -62,7 +68,7 @@ A driver is a probe, a remove and one read function:
    for anything the user needs to see.
 4. Guard your chip-specific calls with `compass->ops == &foo_ops`.
 5. Add `CONFIG_COMPASS_FOO` to the no-chip checks in `CMakeLists.txt`,
-   `src/compass_port_stm.c` and `src/compass_priv.h`, a `src/foo.c` line to
+   `src/compass_port_stm.c` and `src/compass_priv.h`, a `src/foo/foo.c` line to
    `CMakeLists.txt`, a `config COMPASS_FOO` bool to `Kconfig`,
    `# COMPASS_FOO is not set` to both forges' defconfigs, and
    `test/test_foo.c` targets to `test/Makefile`.

@@ -21,8 +21,8 @@
  * command timed out can still land in the next one and shift it.
  *
  * "CMPS14 - documentation" is in docs/cmps14.pdf; every command byte in
- * src/cmps14_cmds.h and cmps14.c cites its page. Nothing here has been run
- * against a physical module.
+ * src/cmps14/cmps14_cmds.h and cmps14.c cites its page. Nothing here has been
+ * run against a physical module.
  */
 #ifndef CMPS14_H
 #define CMPS14_H

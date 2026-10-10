@@ -17,8 +17,8 @@
  * returns -EINVAL if handed a device some other driver probed.
  *
  * Datasheet Version 1.2 is in docs/; every register value in
- * src/ist8310_regs.h and ist8310.c cites its section. Nothing here has been
- * run against a physical chip.
+ * src/ist8310/ist8310_regs.h and ist8310.c cites its section. Nothing here has
+ * been run against a physical chip.
  */
 #ifndef IST8310_H
 #define IST8310_H

@@ -11,8 +11,8 @@
  * -EINVAL if handed a device some other driver probed.
  *
  * Datasheet DocID024204 Rev 4 is in docs/; every register value in
- * src/lis3mdl_regs.h and lis3mdl.c cites its section or table. Nothing here
- * has been run against a physical chip.
+ * src/lis3mdl/lis3mdl_regs.h and lis3mdl.c cites its section or table.
+ * Nothing here has been run against a physical chip.
  */
 #ifndef LIS3MDL_H
 #define LIS3MDL_H

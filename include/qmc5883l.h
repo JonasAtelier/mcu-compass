@@ -13,8 +13,8 @@
  * specific takes the struct compass_dev that qmc5883l_probe() filled, and
  * returns -EINVAL if handed a device some other driver probed.
  *
- * Register provenance is in src/qmc5883l_regs.h. Nothing here has been run
- * against a physical chip.
+ * Register provenance is in src/qmc5883l/qmc5883l_regs.h. Nothing here has
+ * been run against a physical chip.
  */
 #ifndef QMC5883L_H
 #define QMC5883L_H

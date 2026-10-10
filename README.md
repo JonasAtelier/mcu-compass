@@ -67,6 +67,9 @@ The `main` component sees the library automatically. Other components declare
 
 ### esp-forge / stm-forge
 
+stm-forge must be at `ee921c3` or later, which builds the chip folders in
+`src/`; older ones fail at link with undefined chip probes.
+
 Add to `profiles/pkgversion`:
 
 ```make
@@ -82,7 +85,8 @@ COMPASS_QMC5883P   = y
 
 ### STM32 HAL without forge
 
-Compile `src/*.c`, add `include/` to the include path, and define
+Compile every `.c` under `src/`, chip folders included, add `include/` and
+`src/` to the include path, and define
 `CMSIS_device_header` as your family header (`"stm32f4xx.h"` or
 `"stm32f7xx.h"`), `USE_HAL_DRIVER`, and `CONFIG_COMPASS_<CHIP>=1` for each
 selected chip. Enable and compile its required HAL modules.

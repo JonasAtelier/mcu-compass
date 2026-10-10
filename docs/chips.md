@@ -8,7 +8,7 @@ Paths mentioned in this guide are relative to the repository root.
 
 QST datasheet QST-PD-B002-22 Rev E, in `docs/` (download it from qstcorp.com
 if your clone lacks it; PDFs are not committed). Every register value in
-`src/qmc5883p_regs.h` and `src/qmc5883p.c` cites its section or table.
+`src/qmc5883p/qmc5883p_regs.h` and `src/qmc5883p/qmc5883p.c` cites its section or table.
 
 | Range | Full scale | Counts per µT |
 |---|---|---|
@@ -98,8 +98,8 @@ reference driver states one.
 ## IST8310
 
 iSentek datasheet Version 1.2, in `docs/` (LCSC carries it as part C2683055;
-PDFs are not committed). Every register value in `src/ist8310_regs.h` and
-`src/ist8310.c` cites its section.
+PDFs are not committed). Every register value in `src/ist8310/ist8310_regs.h` and
+`src/ist8310/ist8310.c` cites its section.
 
 One range: ±1600 µT on X and Y, ±2500 µT on Z, **0.3 µT per count** (§4.4
 RESO; the same table's 3.3 LSB/µT is that rounded). Four addresses, 0x0C–0x0F,
@@ -142,7 +142,7 @@ heading — nothing here has run on a chip.
 ## LIS3MDL
 
 ST datasheet DocID024204 Rev 4, in `docs/` (PDFs are not committed). Every
-register value in `src/lis3mdl_regs.h` and `src/lis3mdl.c` cites its section
+register value in `src/lis3mdl/lis3mdl_regs.h` and `src/lis3mdl/lis3mdl.c` cites its section
 or table.
 
 **Two probes, one driver.** `lis3mdl_probe_i2c()` takes the same bus handle
@@ -190,7 +190,7 @@ against a known heading — nothing here has run on a chip.
 ## CMPS14
 
 Robot Electronics' "CMPS14 – documentation", in `docs/cmps14.pdf` (not
-committed). Every command byte in `src/cmps14_cmds.h` and `src/cmps14.c`
+committed). Every command byte in `src/cmps14/cmps14_cmds.h` and `src/cmps14/cmps14.c`
 cites its page.
 
 **Serial only.** The module has an I2C mode too, chosen by its mode pin at
