@@ -21,7 +21,7 @@
 #define DRDY_POLL_MS		1
 
 struct qmc5883p {
-	struct compass_i2c i2c;
+	struct compass_bus bus;
 	int range;	/* register codes, so the maths header indexes directly */
 	int odr;
 	int osr1;
@@ -49,13 +49,13 @@ static struct qmc5883p *to_qmc5883p(struct compass_dev *compass)
 static int qmc5883p_read_regs(struct qmc5883p *d, uint8_t reg, void *buf,
 			      size_t len)
 {
-	return compass_i2c_read(&d->i2c, reg, buf, len, I2C_TIMEOUT_MS);
+	return compass_reg_read(&d->bus, reg, buf, len);
 }
 
 /* §8.2.3: register address, then one data byte. */
 static int qmc5883p_write_reg(struct qmc5883p *d, uint8_t reg, uint8_t value)
 {
-	return compass_i2c_write(&d->i2c, reg, value, I2C_TIMEOUT_MS);
+	return compass_reg_write(&d->bus, reg, value);
 }
 
 int qmc5883p_reg_read(struct compass_dev *compass, uint8_t reg, void *buf,
@@ -374,8 +374,8 @@ int qmc5883p_probe(struct compass_dev *compass, compass_i2c_bus bus,
 	d->mode = cfg->continuous ? QMC5883P_MODE_CONTINUOUS :
 				    QMC5883P_MODE_NORMAL;
 
-	ret = compass_i2c_attach(&d->i2c, bus, QMC5883P_ADDR,
-				 compass_config_scl_hz(cfg));
+	ret = compass_i2c_attach(&d->bus, bus, QMC5883P_ADDR,
+				 compass_config_scl_hz(cfg), I2C_TIMEOUT_MS);
 	if (ret) {
 		compass_err(compass, "cannot add 0x%02x to the bus (%d)",
 			    QMC5883P_ADDR, ret);
@@ -422,7 +422,7 @@ int qmc5883p_probe(struct compass_dev *compass, compass_i2c_bus bus,
 fail:
 	compass->ops = NULL;
 	compass->priv = NULL;
-	compass_i2c_detach(&d->i2c);
+	compass_bus_detach(&d->bus);
 	free(d);
 	return ret;
 }
@@ -435,7 +435,7 @@ void qmc5883p_remove(struct compass_dev *compass)
 		return;
 
 	qmc5883p_enter_mode(d, QMC5883P_MODE_SUSPEND);
-	compass_i2c_detach(&d->i2c);
+	compass_bus_detach(&d->bus);
 	free(d);
 	compass->ops = NULL;
 	compass->priv = NULL;

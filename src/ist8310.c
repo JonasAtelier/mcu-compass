@@ -21,7 +21,7 @@
 #define MEASURE_TIMEOUT_MS	100
 
 struct ist8310 {
-	struct compass_i2c i2c;
+	struct compass_bus bus;
 	int avg_xz;		/* register codes */
 	int avg_y;
 	bool measuring;		/* a trigger was accepted ... */
@@ -44,13 +44,13 @@ static struct ist8310 *to_ist8310(struct compass_dev *compass)
 static int ist8310_read_regs(struct ist8310 *d, uint8_t reg, void *buf,
 			     size_t len)
 {
-	return compass_i2c_read(&d->i2c, reg, buf, len, I2C_TIMEOUT_MS);
+	return compass_reg_read(&d->bus, reg, buf, len);
 }
 
 /* §6.3: register address, then one data byte. */
 static int ist8310_write_reg(struct ist8310 *d, uint8_t reg, uint8_t value)
 {
-	return compass_i2c_write(&d->i2c, reg, value, I2C_TIMEOUT_MS);
+	return compass_reg_write(&d->bus, reg, value);
 }
 
 int ist8310_reg_read(struct compass_dev *compass, uint8_t reg, void *buf,
@@ -221,8 +221,8 @@ int ist8310_probe(struct compass_dev *compass, compass_i2c_bus bus,
 	d->avg_xz = (int)cfg->avg_xz;
 	d->avg_y = (int)cfg->avg_y;
 
-	ret = compass_i2c_attach(&d->i2c, bus, address,
-				 compass_config_scl_hz(cfg));
+	ret = compass_i2c_attach(&d->bus, bus, address,
+				 compass_config_scl_hz(cfg), I2C_TIMEOUT_MS);
 	if (ret) {
 		compass_err(compass, "cannot add 0x%02x to the bus (%d)",
 			    address, ret);
@@ -268,7 +268,7 @@ int ist8310_probe(struct compass_dev *compass, compass_i2c_bus bus,
 fail:
 	compass->ops = NULL;
 	compass->priv = NULL;
-	compass_i2c_detach(&d->i2c);
+	compass_bus_detach(&d->bus);
 	free(d);
 	return ret;
 }
@@ -281,7 +281,7 @@ void ist8310_remove(struct compass_dev *compass)
 		return;
 
 	ist8310_write_reg(d, IST8310_CNTL1, IST8310_MODE_STANDBY);
-	compass_i2c_detach(&d->i2c);
+	compass_bus_detach(&d->bus);
 	free(d);
 	compass->ops = NULL;
 	compass->priv = NULL;

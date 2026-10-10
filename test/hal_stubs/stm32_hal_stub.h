@@ -22,6 +22,23 @@ typedef struct {
 	uint32_t id;
 } I2C_HandleTypeDef;
 
+typedef struct {
+	uint32_t id;
+} SPI_HandleTypeDef;
+
+typedef struct {
+	uint32_t id;
+} UART_HandleTypeDef;
+
+typedef struct {
+	uint32_t id;
+} GPIO_TypeDef;
+
+typedef enum {
+	GPIO_PIN_RESET = 0,
+	GPIO_PIN_SET,
+} GPIO_PinState;
+
 #define I2C_MEMADD_SIZE_8BIT	0x00000001U
 
 uint32_t HAL_GetTick(void);
@@ -38,6 +55,36 @@ HAL_StatusTypeDef HAL_I2C_Mem_Write(I2C_HandleTypeDef *hi2c,
 				    uint16_t DevAddress, uint16_t MemAddress,
 				    uint16_t MemAddSize, uint8_t *pData,
 				    uint16_t Size, uint32_t Timeout);
+HAL_StatusTypeDef HAL_I2C_Master_Transmit(I2C_HandleTypeDef *hi2c,
+					  uint16_t DevAddress, uint8_t *pData,
+					  uint16_t Size, uint32_t Timeout);
+
+void HAL_GPIO_WritePin(GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin,
+		       GPIO_PinState PinState);
+
+HAL_StatusTypeDef HAL_SPI_Transmit(SPI_HandleTypeDef *hspi, uint8_t *pData,
+				   uint16_t Size, uint32_t Timeout);
+HAL_StatusTypeDef HAL_SPI_Receive(SPI_HandleTypeDef *hspi, uint8_t *pData,
+				  uint16_t Size, uint32_t Timeout);
+
+HAL_StatusTypeDef HAL_UART_Transmit(UART_HandleTypeDef *huart, uint8_t *pData,
+				    uint16_t Size, uint32_t Timeout);
+HAL_StatusTypeDef HAL_UART_Receive(UART_HandleTypeDef *huart, uint8_t *pData,
+				   uint16_t Size, uint32_t Timeout);
+
+/*
+ * The UART flag macros the port uses, as functions over a fake receive
+ * register: RXNE is "a stale byte is waiting", and the flush reads one.
+ */
+#define UART_FLAG_RXNE				0x20U
+#define __HAL_UART_GET_FLAG(__HANDLE__, __FLAG__) \
+	stub_uart_get_flag((__HANDLE__), (__FLAG__))
+#define __HAL_UART_CLEAR_OREFLAG(__HANDLE__)	stub_uart_clear_ore(__HANDLE__)
+#define __HAL_UART_FLUSH_DRREGISTER(__HANDLE__)	stub_uart_flush(__HANDLE__)
+
+int stub_uart_get_flag(UART_HandleTypeDef *huart, uint32_t flag);
+void stub_uart_clear_ore(UART_HandleTypeDef *huart);
+void stub_uart_flush(UART_HandleTypeDef *huart);
 
 /* --- test hooks, defined in hal_stubs.c --------------------------------- */
 

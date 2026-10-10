@@ -52,6 +52,92 @@ HAL_I2C_Mem_Read(I2C_HandleTypeDef *hi2c, uint16_t DevAddress,
 }
 
 __attribute__((weak)) HAL_StatusTypeDef
+HAL_I2C_Master_Transmit(I2C_HandleTypeDef *hi2c, uint16_t DevAddress,
+			uint8_t *pData, uint16_t Size, uint32_t Timeout)
+{
+	(void)hi2c;
+	(void)DevAddress;
+	(void)pData;
+	(void)Size;
+	(void)Timeout;
+	abort();
+}
+
+__attribute__((weak)) void HAL_GPIO_WritePin(GPIO_TypeDef *GPIOx,
+					     uint16_t GPIO_Pin,
+					     GPIO_PinState PinState)
+{
+	(void)GPIOx;
+	(void)GPIO_Pin;
+	(void)PinState;
+	abort();
+}
+
+__attribute__((weak)) HAL_StatusTypeDef
+HAL_SPI_Transmit(SPI_HandleTypeDef *hspi, uint8_t *pData, uint16_t Size,
+		 uint32_t Timeout)
+{
+	(void)hspi;
+	(void)pData;
+	(void)Size;
+	(void)Timeout;
+	abort();
+}
+
+__attribute__((weak)) HAL_StatusTypeDef
+HAL_SPI_Receive(SPI_HandleTypeDef *hspi, uint8_t *pData, uint16_t Size,
+		uint32_t Timeout)
+{
+	(void)hspi;
+	(void)pData;
+	(void)Size;
+	(void)Timeout;
+	abort();
+}
+
+__attribute__((weak)) HAL_StatusTypeDef
+HAL_UART_Transmit(UART_HandleTypeDef *huart, uint8_t *pData, uint16_t Size,
+		  uint32_t Timeout)
+{
+	(void)huart;
+	(void)pData;
+	(void)Size;
+	(void)Timeout;
+	abort();
+}
+
+__attribute__((weak)) HAL_StatusTypeDef
+HAL_UART_Receive(UART_HandleTypeDef *huart, uint8_t *pData, uint16_t Size,
+		 uint32_t Timeout)
+{
+	(void)huart;
+	(void)pData;
+	(void)Size;
+	(void)Timeout;
+	abort();
+}
+
+__attribute__((weak)) int stub_uart_get_flag(UART_HandleTypeDef *huart,
+					     uint32_t flag)
+{
+	(void)huart;
+	(void)flag;
+	abort();
+}
+
+__attribute__((weak)) void stub_uart_clear_ore(UART_HandleTypeDef *huart)
+{
+	(void)huart;
+	abort();
+}
+
+__attribute__((weak)) void stub_uart_flush(UART_HandleTypeDef *huart)
+{
+	(void)huart;
+	abort();
+}
+
+__attribute__((weak)) HAL_StatusTypeDef
 HAL_I2C_Mem_Write(I2C_HandleTypeDef *hi2c, uint16_t DevAddress,
 		  uint16_t MemAddress, uint16_t MemAddSize, uint8_t *pData,
 		  uint16_t Size, uint32_t Timeout)
