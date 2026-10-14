@@ -117,7 +117,7 @@ decide for you.
 - **The heading assumes the board is flat.** Tilt it and X and Y pick up the
   vertical field, which in temperate latitudes is most of the field. Tilt
   compensation needs an accelerometer — pair it with
-  [`stm-imu`](https://github.com/JonasAtelier/stm-imu).
+  [`mcu-imu`](https://github.com/JonasAtelier/mcu-imu).
 - **Declination** turns magnetic north into true north. It depends on where
   you are and drifts year to year; look it up.
 
