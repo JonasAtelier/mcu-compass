@@ -24,7 +24,8 @@ ESP-IDF component directory named `compass` as well.
 > **Hardware unverified.** Host tests use simulated devices and platform stubs.
 > Nothing here has run on a physical chip.
 
-[Supported hardware](#supported-hardware) · [Install](#install) ·
+[Supported hardware](#supported-hardware) · [Drivers](#drivers) ·
+[Install](#install) ·
 [Quick start](#quick-start) · [Examples](#examples) ·
 [Documentation](#documentation) · [Tests](#tests)
 
@@ -34,15 +35,68 @@ All five drivers support both platforms. Enable only the drivers you need.
 
 | Chip | Bus | Notes |
 |---|---|---|
-| **QMC5883L** | I2C | Fixed address `0x0D`; found on GY-271 boards |
-| **QMC5883P** | I2C | Fixed address `0x2C`; a different chip and register map from the L |
-| **IST8310** | I2C | Addresses `0x0C`–`0x0F`; default `0x0E` |
-| **LIS3MDL** | I2C or SPI | Separate probes for each bus |
-| **CMPS14** | UART | Serial mode only; module provides calibration and tilt-compensated bearing |
+| **QMC5883L** | I2C | QST 3-axis magnetometer |
+| **QMC5883P** | I2C | QST 3-axis magnetometer |
+| **IST8310** | I2C | iSentek 3-axis magnetometer |
+| **LIS3MDL** | I2C or SPI | ST 3-axis magnetometer |
+| **CMPS14** | UART | Robot Electronics tilt-compensated compass |
 
 Unsure which chip your GY-271 carries? Start with the `gy271` example and
 [identification guide](docs/hardware.md#which-chip-is-on-my-gy-271).
 HMC5883L is not supported.
+
+## Drivers
+
+<details><summary><b>QMC5883L</b> — I2C</summary>
+
+Fixed address `0x0D`; found on GY-271 boards.
+
+- Examples (detect QMC5883P or QMC5883L on GY-271): ESP-IDF
+  [gy271](examples/esp/gy271/) · STM32 HAL [gy271](examples/stm/gy271/main.c)
+- Examples: ESP-IDF [qmc5883l](examples/esp/qmc5883l/) · STM32 HAL
+  [qmc5883l](examples/stm/qmc5883l/main.c)
+- Chip reference: [QMC5883L](docs/chips.md#qmc5883l)
+
+</details>
+
+<details><summary><b>QMC5883P</b> — I2C</summary>
+
+Fixed address `0x2C`; a different chip and register map from the L.
+
+- Examples (detect QMC5883P or QMC5883L on GY-271): ESP-IDF
+  [gy271](examples/esp/gy271/) · STM32 HAL [gy271](examples/stm/gy271/main.c)
+- Examples (including self-test): ESP-IDF [qmc5883p](examples/esp/qmc5883p/) ·
+  STM32 HAL [qmc5883p](examples/stm/qmc5883p/main.c)
+- Chip reference: [QMC5883P](docs/chips.md#qmc5883p)
+
+</details>
+
+<details><summary><b>IST8310</b> — I2C</summary>
+
+Addresses `0x0C`–`0x0F`; default `0x0E`.
+
+- Examples: ESP-IDF none · STM32 HAL [ist8310](examples/stm/ist8310/main.c)
+- Chip reference: [IST8310](docs/chips.md#ist8310)
+
+</details>
+
+<details><summary><b>LIS3MDL</b> — I2C or SPI</summary>
+
+Separate probes for each bus.
+
+- Examples: none.
+- Chip reference: [LIS3MDL](docs/chips.md#lis3mdl)
+
+</details>
+
+<details><summary><b>CMPS14</b> — UART</summary>
+
+Serial mode only; module provides calibration and tilt-compensated bearing.
+
+- Examples: none.
+- Chip reference: [CMPS14](docs/chips.md#cmps14)
+
+</details>
 
 ## Install
 
@@ -153,12 +207,7 @@ axis mapping, calibration, logging, and error codes.
 
 ## Examples
 
-| Sensor / task | ESP-IDF | STM32 HAL |
-|---|---|---|
-| Detect QMC5883P or QMC5883L on GY-271 | [gy271](examples/esp/gy271/) | [gy271](examples/stm/gy271/main.c) |
-| QMC5883P, including self-test | [qmc5883p](examples/esp/qmc5883p/) | [qmc5883p](examples/stm/qmc5883p/main.c) |
-| QMC5883L | [qmc5883l](examples/esp/qmc5883l/) | [qmc5883l](examples/stm/qmc5883l/main.c) |
-| IST8310 | — | [ist8310](examples/stm/ist8310/main.c) |
+Each driver's examples are listed under [Drivers](#drivers).
 
 ESP-IDF examples already locate this library through `EXTRA_COMPONENT_DIRS`.
 With ESP-IDF activated, build from an example directory:
