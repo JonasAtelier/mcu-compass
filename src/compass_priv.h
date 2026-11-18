@@ -84,6 +84,17 @@ struct compass_bus {
 #define compass_config_scl_hz(cfg)	((cfg)->scl_hz)
 
 #else /* STM32 HAL */
+/*
+ * Undefined, the include below fails with only
+ * `#include expects "FILENAME" or <FILENAME>`. Every library source that
+ * needs the HAL includes this header before any chip header, so one check
+ * here names the cause on every build route. The HAL module checks sit in
+ * its #else: without the family header no module looks enabled, and each of
+ * them would blame a module instead.
+ */
+#ifndef CMSIS_device_header
+#error "compass: CMSIS_device_header is not defined; define it as the STM32 family header, \"stm32f4xx.h\" or \"stm32f7xx.h\" (CMake: set(MCU_DEVICE_HEADER stm32f4xx.h))"
+#else
 #include CMSIS_device_header
 
 #if !defined(HAL_I2C_MODULE_ENABLED) && \
@@ -97,6 +108,7 @@ struct compass_bus {
 #if !defined(HAL_UART_MODULE_ENABLED) && CONFIG_COMPASS_CMPS14
 #error "COMPASS_CMPS14 needs the HAL UART module: #define HAL_UART_MODULE_ENABLED in the app's stm32f{4,7}xx_hal_conf.h, with stm32f{4,7}xx_hal_uart.c in the build"
 #endif
+#endif /* CMSIS_device_header */
 
 #ifdef HAL_I2C_MODULE_ENABLED
 typedef I2C_HandleTypeDef *compass_i2c_bus;

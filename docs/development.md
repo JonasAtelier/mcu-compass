@@ -33,7 +33,8 @@ examples/
   stm/<chip-or-board>/      STM32 snippets: gy271, ist8310, qmc5883l, qmc5883p
 docs/                       the five guides; datasheet PDFs here are gitignored
 assets/                     README figures
-CMakeLists.txt              ESP-IDF only; stm-forge globs src/**/*.c instead
+CMakeLists.txt              ESP-IDF component; elsewhere a static library for add_subdirectory(); stm-forge globs src/**/*.c instead
+                            the static library's options are Kconfig's bool entries, found by the type line directly under each `config`
 Kconfig                     COMPASS and COMPASS_<CHIP>, for ESP-IDF and both forges' menus
 idf_component.yml           ESP-IDF component manifest
 ```
@@ -114,7 +115,8 @@ A driver is a probe, a remove and one read function:
    every wait, `compass_expired()` for every poll limit, and `compass_err()`
    for anything the user needs to see.
 4. Guard your chip-specific calls with `compass->ops == &foo_ops`.
-5. Add `CONFIG_COMPASS_FOO` to the no-chip checks in `CMakeLists.txt`,
+5. Add `CONFIG_COMPASS_FOO` to the no-chip checks in `CMakeLists.txt` (its
+   ESP-IDF part; the `add_subdirectory()` part reads `Kconfig`),
    `src/compass_port_stm.c` and `src/compass_priv.h`, a `src/foo/foo.c` line to
    `CMakeLists.txt`, a `config COMPASS_FOO` bool to `Kconfig`,
    `# COMPASS_FOO is not set` to both forges' defconfigs, and
