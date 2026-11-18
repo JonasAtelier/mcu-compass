@@ -4,6 +4,13 @@ Read a three-axis magnetic field in microteslas and calculate a heading. The QMC
 
 **Platforms** · ESP-IDF 5.2+ and STM32 HAL (F4/F7). Hardware testing is pending. The host tests use simulated devices.
 
+## Contents
+
+- [Quick start](#quick-start)
+- [Drivers and examples](#drivers-and-examples)
+- [Using the library in your project](#using-the-library-in-your-project)
+- [License](#license)
+
 ## Quick start
 
 Connect a GY-271 module over I2C. The example probes for the two supported QMC chips and identifies the unsupported HMC5883L.
@@ -67,10 +74,25 @@ int read_once(I2C_HandleTypeDef *bus)
 
 </details>
 
+## Drivers and examples
+
+For an unidentified GY-271, start with the board probe below. If you know the part number, its header gives the probe and configuration options. Use `compass_read()` for a field sample and `compass_heading_deg()` for a level-board heading. [Shared API](include/compass.h)
+
+| Chip or board | Driver header | ESP-IDF project | STM32 HAL example |
+|---|---|---|---|
+| GY-271 board | [qmc5883l.h](include/qmc5883l.h) · [qmc5883p.h](include/qmc5883p.h) | [Identify the chip](examples/esp/gy271/) | [Identify the chip](examples/stm/gy271/main.c) |
+| [QMC5883L](docs/chips.md#qmc5883l) | [qmc5883l.h](include/qmc5883l.h) | [Field and heading](examples/esp/qmc5883l/) | [Field and heading](examples/stm/qmc5883l/main.c) |
+| [QMC5883P](docs/chips.md#qmc5883p) | [qmc5883p.h](include/qmc5883p.h) | [Self-test and field](examples/esp/qmc5883p/) | [Self-test and field](examples/stm/qmc5883p/main.c) |
+| [IST8310](docs/chips.md#ist8310) | [ist8310.h](include/ist8310.h) | — | [Field and heading](examples/stm/ist8310/main.c) |
+| [LIS3MDL](docs/chips.md#lis3mdl) | [lis3mdl.h](include/lis3mdl.h) | — | — |
+| [CMPS14](docs/chips.md#cmps14) | [cmps14.h](include/cmps14.h) | — | — |
+
+A dash marks a hardware and platform combination without a dedicated example.
+
 ## Using the library in your project
 
 - Add the component and enable the driver for your hardware. [Installation and build options](docs/installation.md)
-- Start from an example for your chip. The STM32 examples fit into a project with board setup already in place. [ESP-IDF examples](examples/esp/) · [STM32 examples](examples/stm/)
+- Open the ESP-IDF project for your hardware, or copy the STM32 example into a project with board setup already in place. [All ESP-IDF examples](examples/esp/) · [All STM32 examples](examples/stm/)
 - Look up calls and chip-specific settings. [API usage](docs/usage.md) · [Hardware reference](docs/chips.md)
 
 To run the simulated tests on your computer, run `make -C test test` from the library root. [Test requirements and coverage](docs/development.md)
@@ -84,3 +106,5 @@ To run the simulated tests on your computer, run `make -C test test` from the li
        alt="A compass turning in the earth's field, and the two axes it produces"
        width="100%">
 </p>
+
+[Browse the workshop catalog · ESP32 and STM32 drivers](https://github.com/JonasAtelier/jonas-atelier-libraries#esp32-and-stm32-drivers)
