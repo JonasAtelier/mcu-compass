@@ -1,6 +1,6 @@
 version: "0.2.0"
 description: mcu-compass magnetometer subsystem for ESP-IDF and STM32 HAL, with QMC5883L, QMC5883P, IST8310, LIS3MDL and CMPS14 drivers.
-license: MIT
+license: GPL-3.0-only
 dependencies:
   idf:
     version: ">=5.2"
